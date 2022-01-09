@@ -1,0 +1,166 @@
+<html>
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        background-color: gray;
+    }
+
+    img {
+        z-index: -1;
+        image-rendering: optimizeSpeed;
+        /* STOP SMOOTHING, GIVE ME SPEED  */
+        image-rendering: -moz-crisp-edges;
+        /* Firefox                        */
+        image-rendering: -o-crisp-edges;
+        /* Opera                          */
+        image-rendering: -webkit-optimize-contrast;
+        /* Chrome (and eventually Safari) */
+        image-rendering: pixelated;
+        /* Chrome */
+        image-rendering: optimize-contrast;
+        /* CSS3 Proposed                  */
+        -ms-interpolation-mode: nearest-neighbor;
+        /* IE8+      */
+    }
+
+    input {
+        z-index: 1;
+
+    }
+</style>
+
+<body>
+    Sprite size:<br>
+    x:
+    <input type="number" id="width" value="16" oninput="changeImgSize()" /> <br>
+    y:
+    <input type="number" id="height" value="16" oninput="changeImgSize()" /> <br>
+    Preview Scale:
+    <input type="range" id="scale" value="1" oninput="changeScale()" /><br>
+    Preview Offset:<br>
+    x:
+    <input type="range" id="posX" value="10" oninput="changePos()" />
+    y:
+    <input type="range" id="posY" value="10" oninput="changePos()" /><br>
+    img from file:
+    <input type="file" id="file" onchange='openFile(event)' /><br>
+    
+    sprite name:
+    <input type="text" id="name" value="UwU" />
+    <input type="button" id="download" value="download" onclick="download()" />
+    <br>
+    output (sprite):<br>
+    <textarea id='output'></textarea>
+
+
+    <br>
+    <img id='img' onmousedown="dragImg(true)" onmouseup="dragImg(false)" width="16" height="16"
+        src="https://cdns-images.dzcdn.net/images/cover/63d5c2a00ce592c7f36717a9a5bb3a28/264x264.jpg" />
+    <script>
+        const colors = ['#43523d', '#c7f0d8', '#ff0000'];
+        let shiftPressed = false;
+        let drag = false;
+
+        //set range scale
+        document.getElementById('posX').max = document.body.clientWidth;
+        document.getElementById('posY').max = document.body.clientHeight;
+
+        let img = document.getElementById('img');
+
+        function updatePictureFromUrl(input) {
+            const url = input.value;
+            const img = document.getElementById('img');
+            try {
+                img.src = url;
+
+            } catch (e) {
+
+            }
+
+        }
+
+        function render() {
+            const img = document.getElementById('img');
+            const canvas = document.createElement('canvas');
+            const outputField = document.getElementById('output');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            canvas.getContext('2d').drawImage(img, 0, 0, img.width, img.height);
+
+            let pixelData = canvas.getContext('2d').getImageData(0, 0, img.width, img.height).data;
+            let output = [];
+            for (let i = 0; i < pixelData.length; i += 4) {
+                let line = [];
+                if ((pixelData[i] == 199 && pixelData[i + 1] == 240 && pixelData[i + 2] == 216) || (pixelData[i] == 255 && pixelData[i + 1] == 255 && pixelData[i + 2] == 255)) {
+                    line.push(1);
+                } else if ((pixelData[i] == 67 && pixelData[i + 1] == 82 && pixelData[i + 2] == 61) || (pixelData[i] == 0 && pixelData[i + 1] == 0 && pixelData[i + 2] == 0)) {
+                    line.push(0);
+                } else {
+                    line.push(2);
+                }
+                output.push(line);
+            }
+            outputField.innerHTML =`{"width":${img.width}, "height":${img.height}, "frames":[[${output.toString()}]]}`;
+            console.log(output.toString(), output.length);
+        }
+
+        function changeImgSize() {
+            const width = document.getElementById('width').value;
+            const height = document.getElementById('height').value;
+            const img = document.getElementById('img');
+            img.width = width;
+            img.height = height;
+            canvas.width = width;
+            canvas.height = height;
+            canvas.getContext('2d').drawImage(img, 0, 0, img.width, img.height);
+        }
+
+        function changeScale() {
+            changePos();
+        }
+
+        function changePos() {
+            const posX = document.getElementById('posX').value;
+            const scale = document.getElementById('scale').value;
+            const minValY = scale * img.height / 2 + 30;
+            document.getElementById('posY').min = minValY;
+            const posY = document.getElementById('posY').value;
+            //const img = document.getElementById('img');
+            img.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
+            // changeScale();
+        }
+
+        let openFile = function (file) {
+            let input = file.target;
+
+            let reader = new FileReader();
+            reader.onload = function () {
+                let dataURL = reader.result;
+                let output = img;
+                output.src = dataURL;
+            };
+            reader.readAsDataURL(input.files[0]);
+            setTimeout(render, 1000);
+            //render();
+        };
+
+        function download() {
+            let hiddenElement = document.createElement('a');
+
+            hiddenElement.href = 'data:attachment/text,' + encodeURI(document.getElementById('output').innerHTML);
+            hiddenElement.target = '_blank';
+            let name = document.getElementById('name').value;
+            if (name.length == 0) {
+                name = 'noname';
+            }
+            hiddenElement.download = name + '.sprite';
+            hiddenElement.click();
+        }
+
+
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,151 @@
+<html>
+<style>
+    body{
+        background-color: #fafafa;
+        margin: 0;   
+    }
+    img {
+        z-index: -1;
+        image-rendering: optimizeSpeed;
+        /* STOP SMOOTHING, GIVE ME SPEED  */
+        image-rendering: -moz-crisp-edges;
+        /* Firefox                        */
+        image-rendering: -o-crisp-edges;
+        /* Opera                          */
+        image-rendering: -webkit-optimize-contrast;
+        /* Chrome (and eventually Safari) */
+        image-rendering: pixelated;
+        /* Chrome */
+        image-rendering: optimize-contrast;
+        /* CSS3 Proposed                  */
+        -ms-interpolation-mode: nearest-neighbor;
+        /* IE8+      */
+    }
+</style>
+<body>
+    font image file:
+    <input type="file" id="file" onchange='openFile(event)' /><br>
+    <input type="text" id="charArray" value="[a-z], [A-Z], [0-9], !, @, [,]" />
+    <input type="button" id="generate" value="generate" onclick="generateFont()" /><br><br>
+    <img id='preview'>
+
+    <script>
+        let preview = document.getElementById('preview');
+
+        function generateFont() {
+            const img = preview;
+            const canvas = document.createElement('canvas');
+            const outputField = document.getElementById('output');
+            const charAsset = unpackCharArray(document.getElementById('charArray').value);
+            canvas.width = img.width;
+            canvas.height = img.height;
+            canvas.getContext('2d').drawImage(img, 0, 0, img.width, img.height);
+            console.log(img.height)
+            let pixelData = canvas.getContext('2d').getImageData(0, 0, img.width, img.height).data;
+            let font = [];
+            let lastPixelX = 0;
+            for (let i = 0; i < charAsset.length; ++i) {
+                let character = {};
+                character.char = charAsset[i];
+
+                //deternime char width
+                let width = 0;
+                for (let x = lastPixelX; x < img.width - 1; ++x) {
+
+                    //check if row is all white
+                    let rowIsWhite = true;
+                    for (let y = 0; y < img.height; ++y) {
+                        //we are checking only red channel
+                        if (pixelData[(x + y * img.width) * 4] != 255) {
+                            rowIsWhite = false;
+                            break;
+                        }
+                    }
+                    if (rowIsWhite) {
+                        width = x - lastPixelX;
+                        break;
+                    }
+
+                }
+                
+                character.sprite = [];
+
+                //convert char to sprite
+                for (let y = 0; y < img.height; ++y) {
+                    for (let x = 0; x < width; ++x) {
+                        const pixel = pixelData[(x + lastPixelX + y * img.width) * 4] == 255 ? 0 : 1;
+                        character.sprite.push(pixel);
+                    }
+                }
+
+                lastPixelX += width + 1;
+                character.width = width;
+                character.height = img.height;
+                font.push(character);
+            }
+            //console.log(font);
+            console.log(font);
+            font = JSON.stringify(font);
+            console.log(font);
+            setTimeout(() => {
+                download(font);;
+            }, 1200);
+            
+
+        }
+
+        function unpackCharArray(str) {
+            let charArray = [];
+            let charSet = str.split(', ');
+            for (let i = 0; i < charSet.length; ++i) {
+                if (charSet[i].length == 1) {
+                    charArray.push(charSet[i][0]);
+                } else if (charSet[i].length == 5) {
+                    for (let j = charSet[i][1]; j <= charSet[i][3]; j = String.fromCharCode(j.charCodeAt(0) + 1)) {
+                        console.log(charSet[i][1], charSet[i][3], charSet[i][1] < charSet[i][3]);
+                        charArray.push((j));
+                    }
+                } else if (charSet[i].length == 3) {
+                    charArray.push(charSet[i][1]);
+                } else if (charSet[i] == '\\'){
+                    charArray.push('\\');
+                }
+                else {
+                    console.error('Parse error', charSet[i]);
+                    alert(`Parse error unknow ${charSet[i].length} character(s) '${charSet[i]}' at index ${i} before '${charSet[i + 1]}'`);
+                    return
+                }
+            }
+            
+            return charArray;
+        }
+
+        let openFile = function (file) {
+            let input = file.target;
+
+            let reader = new FileReader();
+            reader.onload = function () {
+                let dataURL = reader.result;
+                let output = preview;
+                output.src = dataURL;
+            };
+            reader.readAsDataURL(input.files[0]);
+    
+        };
+
+        function download(font) {
+            let hiddenElement = document.createElement('a');
+
+            hiddenElement.href = 'data:attachment/text,' + encodeURI(font.replace('#', '%23'));
+            hiddenElement.target = '_blank';
+            let name = document.getElementById('file').value.split('\\').pop().split('.')[0];
+            if (name.length == 0) {
+                name = 'noname';
+            }
+            hiddenElement.download = name + '.spriteFont';
+            hiddenElement.click();
+        }
+    </script>
+</body>
+
+</html>
